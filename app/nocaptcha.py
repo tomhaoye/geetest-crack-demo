@@ -1,6 +1,5 @@
 import cv2
 import time
-import math
 from io import BytesIO
 import PIL.Image as image
 from selenium import webdriver
@@ -80,24 +79,6 @@ def get_bin_image(img_path='', save_path='', t_h=150, t_l=60):
     binary.save(save_path)
 
 
-# opencv处理图片
-def opencv_show(img_path=''):
-    img_gray = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-    grad_x = cv2.Sobel(img_gray, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=-1)
-    grad_y = cv2.Sobel(img_gray, ddepth=cv2.CV_32F, dx=0, dy=1, ksize=-1)
-    img_gradient = cv2.subtract(grad_x, grad_y)
-    img_gradient = cv2.convertScaleAbs(img_gradient)
-
-    blurred = cv2.GaussianBlur(img_gradient, (9, 9), 1.5, 9)
-    (_, thresh) = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY)
-
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 25))
-    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-    closed = cv2.erode(closed, None, iterations=4)
-    closed = cv2.dilate(closed, None, iterations=4)
-    cv2.imwrite(opencv_bg_path, closed)
-
-
 # 模拟滑动
 def btn_slide(browser, x_offset=0):
     x_offset = x_offset - 6 if x_offset > 6 else x_offset
@@ -123,6 +104,24 @@ def get_x_move_speed(distance=0, left_time=0, section=10):
         new_speed = new_speed - acc_speed
         move_offset.append(new_speed / section)
     return move_offset
+
+
+# opencv处理图片
+def opencv_show(img_path=''):
+    img_gray = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    grad_x = cv2.Sobel(img_gray, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=-1)
+    grad_y = cv2.Sobel(img_gray, ddepth=cv2.CV_32F, dx=0, dy=1, ksize=-1)
+    img_gradient = cv2.subtract(grad_x, grad_y)
+    img_gradient = cv2.convertScaleAbs(img_gradient)
+
+    blurred = cv2.GaussianBlur(img_gradient, (9, 9), 1.5, 9)
+    (_, thresh) = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 25))
+    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    closed = cv2.erode(closed, None, iterations=4)
+    closed = cv2.dilate(closed, None, iterations=4)
+    cv2.imwrite(opencv_bg_path, closed)
 
 
 # 混乱图片还原
@@ -157,5 +156,3 @@ btn_slide(t_browser, x)
 
 # bg = merge_img(origin_bg_path, merge_bg_path)
 # fbg = merge_img(origin_fbg_path, merge_fbg_path)
-# bg.paste('#000000', (x, 0, x + 1, 160))
-# bg.save('../pic/lll.jpg')
