@@ -17,7 +17,7 @@
     - nocaptcha.py  `完整模拟、单一图片处理定位`
     - getdiffbin.py `原图与缺口图对比处理方法思路`
 - gif
-    - *.gif `缺口与图片对比度大及图片干扰元素较少的理想结果`
+    - *.gif `效果展示`
 - pic   `nocaptcha.py 运行结果`
 - src   `getdiffbin.py 运行结果`
     - 1~10.jpg/bmp  `每两张为一组原图[1,2],[3,4],……`
