@@ -77,12 +77,39 @@ def get_bin_image(img_path='', save_path='', t_h=150, t_l=60):
     binary.save(save_path)
 
 
+# 获取左边起始像素
+def get_start_point(bin_img_path=''):
+    img = image.open(bin_img_path)
+    # 滑块左边位置7px[6\13]处，获取滑块位置
+    _pixel = 42
+    _color_diff_list = {}
+    initial_slider_left_x_index_range = range(6, 14)
+    for initial_slider_left_x_index in initial_slider_left_x_index_range:
+        back_color_n = 0
+        slider_left = {}
+        for y_cur in range(118):
+            color_n = 0
+            for add_to_next in range(_pixel):
+                color_n += img.getpixel((initial_slider_left_x_index, y_cur + add_to_next))
+            slider_left[color_n] = y_cur
+        w_color_n_max = max(slider_left)
+        y_start_cur = slider_left[w_color_n_max]
+        print(f'索引{initial_slider_left_x_index}左白值总和:{w_color_n_max}')
+        for add_to_next in range(_pixel):
+            back_color_n += img.getpixel((initial_slider_left_x_index + 1, y_start_cur + add_to_next))
+        print(f'索引{initial_slider_left_x_index}右白值总和:{back_color_n}')
+        _color_diff_list[w_color_n_max - back_color_n] = initial_slider_left_x_index
+    best_point = _color_diff_list[max(_color_diff_list)]
+    print(f'最佳起点:{best_point}')
+    return best_point
+
+
 # 分割线二值化图片定位
 def get_x_point_in_contour(bin_img_path=''):
     img = image.open(bin_img_path)
-    # 滑块左边位置7px[6]处，获取滑块位置
+    # 滑块左边位置7px[6\10]处，获取滑块位置
     _pixel = 42
-    slider_left_x_index = 6  # 大多数为6
+    slider_left_x_index = get_start_point(bin_img_path)
     slider_left = {}
     for y_cur in range(118):
         color_n = 0
@@ -90,6 +117,7 @@ def get_x_point_in_contour(bin_img_path=''):
             color_n += img.getpixel((slider_left_x_index, y_cur + add_to_next))
         slider_left[color_n] = y_cur
     y_max_col = max(slider_left)
+    print(f'滑块左边白值总和:{y_max_col}')
     y_start_cur = slider_left[y_max_col]
     print(f'缺口图像y轴初始位置:{y_start_cur}')
     # 缺口出现范围大概在x轴[48-52]-220
@@ -106,14 +134,17 @@ def get_x_point_in_contour(bin_img_path=''):
     print(f'找到缺口可能位置{_maybe}')
     # 没找到暂时返回滑块长度加滑块起始位置
     if len(_maybe) == 0:
-        return 42 + slider_left_x_index
+        return 42 + slider_left_x_index, slider_left_x_index
     elif len(_maybe) == 1:
-        return _maybe[0]
+        return _maybe[0], slider_left_x_index
     # 多个结果，则找相邻（缺口内不会有太多干扰元素）结果间差距在38-43之间的第一个数
+    _max_diff = {}
     for i in range(len(_maybe) - 1):
         if _maybe[i + 1] - _maybe[i] in range(38, 43):
-            return _maybe[i]
-    return _maybe[0]
+            return _maybe[i], slider_left_x_index
+        else:
+            _max_diff[_maybe[i + 1] - _maybe[i]] = _maybe[i]
+    return _max_diff[max(_max_diff)]
 
 
 # 明显分割线获取
@@ -137,16 +168,16 @@ def get_contour_image(img_path='', save_path=''):
 
 
 # 模拟滑动
-def btn_slide(browser, x_offset=0):
+def btn_slide(browser, x_offset=0, _x_start=6):
     # 开始位置右偏6像素
-    x_offset = abs(x_offset - 6 + 1)
+    x_offset = abs(x_offset - _x_start + 1)
     slider = browser.find_element_by_class_name("geetest_slider_button")
     ActionChains(browser).click_and_hold(slider).perform()
     section = x_offset
     left_time = 1
     x_move_list = get_x_move_speed(x_offset, left_time, section)
-    print(x_move_list)
-    print(sum(x_move_list))
+    print(f'魔鬼的步伐：{x_move_list}')
+    print(f'实际应该移动距离:{sum(x_move_list)}')
     for x_move in x_move_list:
         ActionChains(browser).move_by_offset(x_move, yoffset=0).perform()
     ActionChains(browser).release().perform()
@@ -162,7 +193,7 @@ def get_x_move_speed(distance=0, left_time=0, section=10):
     for i in range(0, section):
         new_speed = new_speed - acc_speed
         move_offset.append(round(new_speed / section))
-        if sum(move_offset) >= distance:
+        if sum(move_offset) >= distance or (round(new_speed / section)) == 0:
             break
     if sum(move_offset) < distance:
         move_offset.append(distance - sum(move_offset))
@@ -187,13 +218,14 @@ def opencv_show(img_path=''):
     cv2.imwrite(opencv_bg_path, closed)
 
 
-t_browser = simulate()
-get_contour_image(cut_image_path, contour_bin_path)
+while True:
+    t_browser = simulate()
+    get_contour_image(cut_image_path, contour_bin_path)
 
-# get_bin_image(cut_image_path, bin_bg_path)
-# x = get_x_point(bin_bg_path)
+    # get_bin_image(cut_image_path, bin_bg_path)
+    # x = get_x_point(bin_bg_path)
 
-x = get_x_point_in_contour(contour_bin_path)
-btn_slide(t_browser, x)
+    (x, slider_left_x_start) = get_x_point_in_contour(contour_bin_path)
+    btn_slide(t_browser, x, slider_left_x_start)
 
 # opencv_show(cut_image_path)
