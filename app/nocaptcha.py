@@ -8,15 +8,10 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-origin_bg_path = '../pic/bg.jpg'
-origin_fbg_path = '../pic/fbg.jpg'
-merge_bg_path = '../pic/merged.jpg'
-merge_fbg_path = '../pic/fmerged.jpg'
-
-cut_image_path = '../pic/cut.jpg'
+cut_image_path = '../pic/cut.png'
 bin_bg_path = '../pic/bin_bg.bmp'
 contour_bin_path = '../pic/contour.bmp'
-opencv_bg_path = '../pic/opencv_bg.jpg'
+opencv_bg_path = '../pic/opencv_bg.bmp'
 
 
 def simulate():
@@ -43,7 +38,6 @@ def cut_gt_window_image(browser):
     screen_shot = browser.get_screenshot_as_png()
     screen_shot = image.open(BytesIO(screen_shot))
     captcha = screen_shot.crop((left, top, right, bottom))
-    captcha = captcha.convert('RGB')
     captcha.save(cut_image_path)
     return browser
 
@@ -52,7 +46,7 @@ def cut_gt_window_image(browser):
 def get_x_point(bin_img_path=''):
     tmp_x_cur = 0
     img = image.open(bin_img_path).load()
-    # 缺口出现范围大概在x轴48-220,y轴15-145
+    # 缺口出现范围大概在x轴[48-52]-220,y轴15-145
     for y_cur in range(15, 145):
         b_acc = 0
         tmp_x_cur = 0
@@ -85,28 +79,41 @@ def get_bin_image(img_path='', save_path='', t_h=150, t_l=60):
 
 # 分割线二值化图片定位
 def get_x_point_in_contour(bin_img_path=''):
-    img = image.open(bin_img_path).load()
+    img = image.open(bin_img_path)
     # 滑块左边位置7px[6]处，获取滑块位置
-    slider_left_x_index = 6
+    _pixel = 42
+    slider_left_x_index = 6  # 大多数为6
     slider_left = {}
-    for y_cur in range(120):
+    for y_cur in range(118):
         color_n = 0
-        for add_to_next in range(40):
-            color_n += img[slider_left_x_index, y_cur + add_to_next]
+        for add_to_next in range(_pixel):
+            color_n += img.getpixel((slider_left_x_index, y_cur + add_to_next))
         slider_left[color_n] = y_cur
-    y_start_cur = slider_left[max(slider_left)]
-    # 缺口出现范围大概在x轴60-220,y轴15-145
-    for x_cur in range(60, 230):
-        for y_cur in range(15, 145):
-            if img[x_cur, y_cur] == 255:
-                if b_acc == 0:
-                    tmp_x_cur = x_cur
-                b_acc += 1
-            else:
-                if b_acc in range(36, 44):
-                    print(x_cur, ' ', y_cur, ' ', b_acc)
-                else:
-                    b_acc = 0
+    y_max_col = max(slider_left)
+    y_start_cur = slider_left[y_max_col]
+    print(f'缺口图像y轴初始位置:{y_start_cur}')
+    # 缺口出现范围大概在x轴[48-52]-220
+    gap_left = {}
+    for x_cur in range(53, 220):
+        color_n = 0
+        for y_cur in range(y_start_cur, y_start_cur + _pixel):
+            color_n += img.getpixel((x_cur, y_cur))
+        gap_left[x_cur] = color_n
+    _maybe = []
+    for x_cur in gap_left:
+        if gap_left[x_cur] in range(int(y_max_col * 0.85), int(y_max_col * 1.3)):
+            _maybe.append(x_cur)
+    print(f'找到缺口可能位置{_maybe}')
+    # 没找到暂时返回滑块长度加滑块起始位置
+    if len(_maybe) == 0:
+        return 42 + slider_left_x_index
+    elif len(_maybe) == 1:
+        return _maybe[0]
+    # 多个结果，则找相邻（缺口内不会有太多干扰元素）结果间差距在38-43之间的第一个数
+    for i in range(len(_maybe) - 1):
+        if _maybe[i + 1] - _maybe[i] in range(38, 43):
+            return _maybe[i]
+    return _maybe[0]
 
 
 # 明显分割线获取
@@ -181,13 +188,12 @@ def opencv_show(img_path=''):
 
 
 t_browser = simulate()
-# get_contour_image(cut_image_path, contour_bin_path)
+get_contour_image(cut_image_path, contour_bin_path)
 
-get_bin_image(cut_image_path, bin_bg_path)
-x = get_x_point(bin_bg_path)
+# get_bin_image(cut_image_path, bin_bg_path)
+# x = get_x_point(bin_bg_path)
 
-# x = get_x_point_in_contour(contour_bin_path)
-print(x - 6)
+x = get_x_point_in_contour(contour_bin_path)
 btn_slide(t_browser, x)
 
 # opencv_show(cut_image_path)
