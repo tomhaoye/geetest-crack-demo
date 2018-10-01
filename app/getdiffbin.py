@@ -1,14 +1,14 @@
 import PIL.Image as image
 
 # 修改图片组
-origin_bg_path = '../src/7.jpg'
-origin_fbg_path = '../src/8.jpg'
+origin_bg_path = '../src/7.bmp'
+origin_fbg_path = '../src/8.bmp'
 
-merge_bg_path = '../src/merged.jpg'
-merge_fbg_path = '../src/fmerged.jpg'
-diff_path = '../src/diff.jpg'
-large_diff_path = '../src/ldiff.jpg'
-bin_path = '../src/bin.jpg'
+merge_bg_path = '../src/merged.bmp'
+merge_fbg_path = '../src/fmerged.bmp'
+diff_path = '../src/diff.bmp'
+large_diff_path = '../src/ldiff.bmp'
+bin_path = '../src/bin.bmp'
 
 
 # 混乱图片还原并灰度化
