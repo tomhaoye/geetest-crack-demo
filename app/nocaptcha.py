@@ -1,4 +1,3 @@
-import cv2
 import time
 from io import BytesIO
 import PIL.Image as image
@@ -144,7 +143,7 @@ def get_x_point_in_contour(bin_img_path=''):
             return _maybe[i], slider_left_x_index
         else:
             _max_diff[_maybe[i + 1] - _maybe[i]] = _maybe[i]
-    return _max_diff[max(_max_diff)]
+    return _max_diff[max(_max_diff)], slider_left_x_index
 
 
 # 明显分割线获取
@@ -200,32 +199,12 @@ def get_x_move_speed(distance=0, left_time=0, section=10):
     return move_offset
 
 
-# opencv处理图片
-def opencv_show(img_path=''):
-    img_gray = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-    grad_x = cv2.Sobel(img_gray, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=-1)
-    grad_y = cv2.Sobel(img_gray, ddepth=cv2.CV_32F, dx=0, dy=1, ksize=-1)
-    img_gradient = cv2.subtract(grad_x, grad_y)
-    img_gradient = cv2.convertScaleAbs(img_gradient)
-
-    blurred = cv2.GaussianBlur(img_gradient, (9, 9), 1.5, 9)
-    (_, thresh) = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY)
-
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 25))
-    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-    closed = cv2.erode(closed, None, iterations=4)
-    closed = cv2.dilate(closed, None, iterations=4)
-    cv2.imwrite(opencv_bg_path, closed)
-
-
 while True:
     t_browser = simulate()
-    get_contour_image(cut_image_path, contour_bin_path)
-
+    # 另外一种方式，未优化，成功率低
     # get_bin_image(cut_image_path, bin_bg_path)
     # x = get_x_point(bin_bg_path)
-
+    #
+    get_contour_image(cut_image_path, contour_bin_path)
     (x, slider_left_x_start) = get_x_point_in_contour(contour_bin_path)
     btn_slide(t_browser, x, slider_left_x_start)
-
-# opencv_show(cut_image_path)
