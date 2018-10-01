@@ -14,7 +14,8 @@ merge_bg_path = '../pic/merged.jpg'
 merge_fbg_path = '../pic/fmerged.jpg'
 
 cut_image_path = '../pic/cut.jpg'
-bin_bg_path = '../pic/bin_bg.jpg'
+bin_bg_path = '../pic/bin_bg.bmp'
+contour_bin_path = '../pic/contour.bmp'
 opencv_bg_path = '../pic/opencv_bg.jpg'
 
 
@@ -32,7 +33,7 @@ def simulate():
     return cut_gt_window_image(browser)
 
 
-# 直接页面截取图片/不太行/居然这才行
+# 直接页面截取图片
 def cut_gt_window_image(browser):
     image_div = browser.find_element_by_class_name("geetest_window")
     location = image_div.location
@@ -47,25 +48,28 @@ def cut_gt_window_image(browser):
     return browser
 
 
+# 阈值二值化图片定位
 def get_x_point(bin_img_path=''):
-    b_acc = 0
     tmp_x_cur = 0
     img = image.open(bin_img_path).load()
-    for y_cur in range(30, 130):
-        for x_cur in range(60, 260):
+    # 缺口出现范围大概在x轴48-220,y轴15-145
+    for y_cur in range(15, 145):
+        b_acc = 0
+        tmp_x_cur = 0
+        for x_cur in range(48, 220):
             if img[x_cur, y_cur] == 0:
                 if b_acc == 0:
                     tmp_x_cur = x_cur
                 b_acc += 1
             else:
-                if b_acc in range(32, 44):
+                if b_acc in range(36, 44):
                     return tmp_x_cur - 40 + b_acc
                 else:
                     b_acc = 0
     return tmp_x_cur
 
 
-# 二值化
+# 阈值二值化
 def get_bin_image(img_path='', save_path='', t_h=150, t_l=60):
     img = image.open(img_path)
     img = img.convert('L')
@@ -79,17 +83,65 @@ def get_bin_image(img_path='', save_path='', t_h=150, t_l=60):
     binary.save(save_path)
 
 
+# 分割线二值化图片定位
+def get_x_point_in_contour(bin_img_path=''):
+    img = image.open(bin_img_path).load()
+    # 滑块左边位置7px[6]处，获取滑块位置
+    slider_left_x_index = 6
+    slider_left = {}
+    for y_cur in range(120):
+        color_n = 0
+        for add_to_next in range(40):
+            color_n += img[slider_left_x_index, y_cur + add_to_next]
+        slider_left[color_n] = y_cur
+    y_start_cur = slider_left[max(slider_left)]
+    # 缺口出现范围大概在x轴60-220,y轴15-145
+    for x_cur in range(60, 230):
+        for y_cur in range(15, 145):
+            if img[x_cur, y_cur] == 255:
+                if b_acc == 0:
+                    tmp_x_cur = x_cur
+                b_acc += 1
+            else:
+                if b_acc in range(36, 44):
+                    print(x_cur, ' ', y_cur, ' ', b_acc)
+                else:
+                    b_acc = 0
+
+
+# 明显分割线获取
+def get_contour_image(img_path='', save_path=''):
+    contour_img = image.new('L', (260, 160))
+    img = image.open(img_path)
+    img = img.convert('L')
+    h_last_point = None
+    v_last_point = None
+    for x in range(260):
+        for y in range(160):
+            if v_last_point is not None and abs(img.getpixel((x, y)) - v_last_point) > 25:
+                contour_img.putpixel((x, y), 255)
+            v_last_point = img.getpixel((x, y))
+    for y in range(160):
+        for x in range(260):
+            if h_last_point is not None and abs(img.getpixel((x, y)) - h_last_point) > 25:
+                contour_img.putpixel((x, y), 255)
+            h_last_point = img.getpixel((x, y))
+    contour_img.save(save_path)
+
+
 # 模拟滑动
 def btn_slide(browser, x_offset=0):
-    x_offset = x_offset - 6 if x_offset > 6 else x_offset
+    # 开始位置右偏6像素
+    x_offset = abs(x_offset - 6 + 1)
     slider = browser.find_element_by_class_name("geetest_slider_button")
     ActionChains(browser).click_and_hold(slider).perform()
     section = x_offset
     left_time = 1
     x_move_list = get_x_move_speed(x_offset, left_time, section)
     print(x_move_list)
+    print(sum(x_move_list))
     for x_move in x_move_list:
-        ActionChains(browser).move_by_offset(round(x_move), yoffset=0).perform()
+        ActionChains(browser).move_by_offset(x_move, yoffset=0).perform()
     ActionChains(browser).release().perform()
     time.sleep(2)
     browser.close()
@@ -102,7 +154,11 @@ def get_x_move_speed(distance=0, left_time=0, section=10):
     new_speed = origin_speed
     for i in range(0, section):
         new_speed = new_speed - acc_speed
-        move_offset.append(new_speed / section)
+        move_offset.append(round(new_speed / section))
+        if sum(move_offset) >= distance:
+            break
+    if sum(move_offset) < distance:
+        move_offset.append(distance - sum(move_offset))
     return move_offset
 
 
@@ -124,35 +180,14 @@ def opencv_show(img_path=''):
     cv2.imwrite(opencv_bg_path, closed)
 
 
-# 混乱图片还原
-def merge_img(img_path='', target=''):
-    im = image.open(img_path)
-    to_image = image.new('RGB', (260, 160))
-    dx = 12
-    dy = 80
-    x = 0
-    img_map = {1: 18, 2: 17, 3: 15, 4: 16, 5: 22, 6: 21, 7: 14, 8: 13, 9: 10, 10: 9, 11: 19, 12: 20, 13: 2, 14: 1,
-               15: 6, 16: 5, 17: 26, 18: 25, 19: 23, 20: 24, 21: 7, 22: 8, 23: 3, 24: 4, 25: 11, 26: 12}
-    while x <= 300:
-        y = 0
-        while y <= 80:
-            from_img = im.crop((x, y, x + dx, y + dy))
-            second_line = img_map[(x / 12) if ((x / 12) % 2) else (x / 12 + 2)] - 1
-            loc = ((img_map[x / 12 + 1] - 1) * 10 if y else second_line * 10, abs(y - dy))
-            to_image.paste(from_img, loc)
-            y += dy
-        x += dx
-    to_image = to_image.convert('L')
-    to_image.save(target)
-    return to_image
-
-
 t_browser = simulate()
+# get_contour_image(cut_image_path, contour_bin_path)
+
 get_bin_image(cut_image_path, bin_bg_path)
-# opencv_show(cut_image_path)
 x = get_x_point(bin_bg_path)
-print(x)
+
+# x = get_x_point_in_contour(contour_bin_path)
+print(x - 6)
 btn_slide(t_browser, x)
 
-# bg = merge_img(origin_bg_path, merge_bg_path)
-# fbg = merge_img(origin_fbg_path, merge_fbg_path)
+# opencv_show(cut_image_path)
