@@ -148,7 +148,7 @@ def get_x_point_in_contour(bin_img_path=''):
 
 # 明显分割线获取
 def get_contour_image(img_path='', save_path=''):
-    contour_img = image.new('L', (260, 160))
+    contour_img = image.new('1', (260, 160))
     img = image.open(img_path)
     img = img.convert('L')
     h_last_point = None
@@ -156,12 +156,12 @@ def get_contour_image(img_path='', save_path=''):
     for x in range(260):
         for y in range(160):
             if v_last_point is not None and abs(img.getpixel((x, y)) - v_last_point) > 25:
-                contour_img.putpixel((x, y), 255)
+                contour_img.putpixel((x, y), 1)
             v_last_point = img.getpixel((x, y))
     for y in range(160):
         for x in range(260):
             if h_last_point is not None and abs(img.getpixel((x, y)) - h_last_point) > 25:
-                contour_img.putpixel((x, y), 255)
+                contour_img.putpixel((x, y), 1)
             h_last_point = img.getpixel((x, y))
     contour_img.save(save_path)
 
