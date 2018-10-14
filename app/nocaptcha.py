@@ -106,8 +106,10 @@ def get_start_point(bin_img_path=''):
 # 分割线二值化图片定位
 def get_x_point_in_contour(bin_img_path=''):
     img = image.open(bin_img_path)
-    # 滑块左边位置7px[6\13]处（考虑凸在左的情况），获取滑块位置
+    # 拼块外部阴影范围
+    _shadow_width = 5
     _pixel = 42
+    # 滑块左边位置7px[6\13]处（考虑凸在左的情况），获取滑块位置
     slider_left_x_index = get_start_point(bin_img_path)
     slider_left = {}
     for y_cur in range(118):
@@ -121,7 +123,7 @@ def get_x_point_in_contour(bin_img_path=''):
     print(f'缺口图像y轴初始位置:{y_start_cur}')
     # 缺口出现范围大概在x轴[48-52]-220
     gap_left = {}
-    for x_cur in range(slider_left_x_index + _pixel, 220):
+    for x_cur in range(slider_left_x_index + _pixel + _shadow_width, 220):
         color_n = 0
         for y_cur in range(y_start_cur, y_start_cur + _pixel):
             color_n += img.getpixel((x_cur, y_cur))
