@@ -106,7 +106,7 @@ def get_start_point(bin_img_path=''):
 # 分割线二值化图片定位
 def get_x_point_in_contour(bin_img_path=''):
     img = image.open(bin_img_path)
-    # 滑块左边位置7px[6\10]处，获取滑块位置
+    # 滑块左边位置7px[6\13]处（考虑凸在左的情况），获取滑块位置
     _pixel = 42
     slider_left_x_index = get_start_point(bin_img_path)
     slider_left = {}
