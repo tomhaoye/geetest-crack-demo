@@ -121,7 +121,7 @@ def get_x_point_in_contour(bin_img_path=''):
     print(f'缺口图像y轴初始位置:{y_start_cur}')
     # 缺口出现范围大概在x轴[48-52]-220
     gap_left = {}
-    for x_cur in range(53, 220):
+    for x_cur in range(slider_left_x_index + _pixel, 220):
         color_n = 0
         for y_cur in range(y_start_cur, y_start_cur + _pixel):
             color_n += img.getpixel((x_cur, y_cur))
