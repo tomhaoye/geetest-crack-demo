@@ -170,7 +170,7 @@ def get_contour_image(img_path='', save_path=''):
 
 # 模拟滑动
 def btn_slide(browser, x_offset=0, _x_start=6):
-    # 开始位置右偏6像素
+    # 开始位置右偏6-13像素
     x_offset = abs(x_offset - _x_start + 1)
     slider = browser.find_element_by_class_name("geetest_slider_button")
     ActionChains(browser).click_and_hold(slider).perform()
